@@ -1,0 +1,112 @@
+import sys
+import pygame
+import time
+
+pygame.init()
+
+width, height = 1280, 720
+screen = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Juego de la vida")
+
+yellow = (255, 255, 0)
+grey = (128, 128, 128)
+white = (255, 255, 255)
+square_pos = None
+screen.fill(grey)
+
+columns = int(input("Ingrese la cantidad de columnas: "))
+rows = int(input("Ingrese la cantidad de filas: "))
+
+# Calculate the size of each grid cell
+cell_width = screen.get_width() // columns
+cell_height = screen.get_height() // rows
+
+# Draw the grid
+for i in range(rows):
+    pygame.draw.line(screen, white, (0, i * cell_height), (screen.get_width(), i * cell_height))
+for i in range(columns):
+    pygame.draw.line(screen, white, (i * cell_width, 0), (i * cell_width, screen.get_height()))
+
+vector = [[False for _ in range(rows)] for _ in range(columns)]
+
+start_game = False
+restart_game = False
+# Time intervals for different actions
+mouse_response_time = 0.1  # 100ms
+game_update_time = 0.5  # 500ms
+
+last_mouse_response = time.time()
+last_game_update = time.time()
+
+while True:
+    current_time = time.time()
+
+    # Handle events (mouse, keyboard)
+    if current_time - last_mouse_response >= mouse_response_time:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                square_pos = pygame.mouse.get_pos()
+                currentcolum = square_pos[0] // cell_width
+                currentrow = square_pos[1] // cell_height
+
+                # Ensure the indices are within the grid bounds
+                if 0 <= currentcolum < columns and 0 <= currentrow < rows:
+                    vector[currentcolum][currentrow] = not vector[currentcolum][currentrow]
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_a:
+                    start_game = not start_game
+                if event.key == pygame.K_b:
+                    restart_game = not restart_game
+
+        last_mouse_response = current_time
+
+    if restart_game:
+        for i in range(rows):
+            for j in range(columns):
+                vector[i][j]=False
+        restart_game = not restart_game
+    # Update the game grid based on Conway's rules
+    if start_game and current_time - last_game_update >= game_update_time:
+        act_vector = [[False for _ in range(rows)] for _ in range(columns)]
+        for i in range(columns):
+            for j in range(rows):
+                count = 0
+                for x in [-1, 0, 1]:
+                    for y in [-1, 0, 1]:
+                        if x == 0 and y == 0:
+                            continue
+                        ni = i + x
+                        nj = j + y
+                        if 0 <= ni < columns and 0 <= nj < rows:
+                            if vector[ni][nj]:
+                                count += 1
+                if vector[i][j]:
+                    if count == 2 or count == 3:
+                        act_vector[i][j] = True
+                else:
+                    if count == 3:
+                        act_vector[i][j] = True
+        vector = act_vector
+        last_game_update = current_time
+
+    screen.fill(grey)
+
+    # Draw the updated grid
+    for i in range(columns):
+        for j in range(rows):
+            if vector[i][j]:
+                pygame.draw.rect(screen, yellow, pygame.Rect(i * cell_width, j * cell_height, cell_width, cell_height))
+
+    for i in range(rows):
+        pygame.draw.line(screen, white, (0, i * cell_height), (screen.get_width(), i * cell_height))
+    for i in range(columns):
+        pygame.draw.line(screen, white, (i * cell_width, 0), (i * cell_width, screen.get_height()))
+    
+    pygame.display.flip()
+
+    # Sleep for the shorter interval to maintain responsiveness
+    time.sleep(0.01)
